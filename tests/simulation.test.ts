@@ -19,8 +19,8 @@ describe("simulation", () => {
     const first = new Simulation(config, "seed-a", params);
     const second = new Simulation(config, "seed-a", params);
 
-    seedPreset(first, "foundry");
-    seedPreset(second, "foundry");
+    seedPreset(first, "river-garden");
+    seedPreset(second, "river-garden");
 
     expect(Array.from(first.cloneMaterialBuffer())).toEqual(Array.from(second.cloneMaterialBuffer()));
   });
@@ -58,6 +58,16 @@ describe("simulation", () => {
     expect(simulation.getCell(4, 3).material).not.toBe("metal");
   });
 
+  it("springs emit running water", () => {
+    const simulation = new Simulation(config, "spring", params);
+    simulation.setCell(3, 2, "spring");
+
+    simulation.step();
+    simulation.step();
+
+    expect(simulation.getCell(3, 3).material).toBe("water");
+  });
+
   it("fire turns water into steam", () => {
     const simulation = new Simulation(config, "fire", params);
     simulation.setCell(3, 3, "fire", 3);
@@ -75,6 +85,21 @@ describe("simulation", () => {
 
     simulation.step();
     expect(simulation.getCell(4, 3).material).toBe("spark");
+  });
+
+  it("lava sources emit lava", () => {
+    const simulation = new Simulation(config, "lava-source", params);
+    simulation.setCell(3, 2, "lava-source");
+
+    for (let step = 0; step < 4; step += 1) {
+      simulation.step();
+    }
+
+    expect(
+      simulation.getCell(3, 3).material === "lava" ||
+      simulation.getCell(2, 3).material === "lava" ||
+      simulation.getCell(4, 3).material === "lava",
+    ).toBe(true);
   });
 
   it("spark has a bounded lifetime when isolated", () => {
@@ -103,5 +128,25 @@ describe("simulation", () => {
       simulation.getCell(4, 4).material,
     ];
     expect(nearby).toContain("crystal");
+  });
+
+  it("plant spreads when hydrated", () => {
+    const simulation = new Simulation(config, "plant", params);
+    simulation.setCell(3, 4, "stone");
+    simulation.setCell(3, 3, "plant", 20);
+    simulation.setCell(4, 4, "spring");
+
+    for (let step = 0; step < 8; step += 1) {
+      simulation.step();
+    }
+
+    const nearby = [
+      simulation.getCell(2, 2).material,
+      simulation.getCell(3, 2).material,
+      simulation.getCell(4, 2).material,
+      simulation.getCell(2, 3).material,
+      simulation.getCell(4, 3).material,
+    ];
+    expect(nearby).toContain("plant");
   });
 });
