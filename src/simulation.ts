@@ -581,6 +581,10 @@ export class Simulation {
   }
 
   private updateLava(x: number, y: number, index: number): void {
+    if (this.tryDrainOutBottom(y, index, EMPTY)) {
+      return;
+    }
+
     for (const neighbor of this.cardinalNeighbors(x, y)) {
       if (!this.inBounds(neighbor.x, neighbor.y)) {
         continue;
