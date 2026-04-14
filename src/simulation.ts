@@ -605,11 +605,10 @@ export class Simulation {
         return;
       }
 
-      if (material === STONE && this.rng() < 0.08) {
-        this.materials[index] = STONE;
-        this.life[index] = 0;
-        this.updatedAt[index] = this.tick;
-        return;
+      if (material === METAL && (this.params.reactionRate >= 1 || this.rng() < 0.7 * this.params.reactionRate)) {
+        this.materials[neighborIndex] = SPARK;
+        this.life[neighborIndex] = defaultLife(SPARK, this.rng);
+        this.updatedAt[neighborIndex] = this.tick;
       }
 
       if (isPlantFuel(material) || material === CRYSTAL) {

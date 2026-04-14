@@ -150,6 +150,34 @@ describe("simulation", () => {
     expect(cells).toContain("lava");
   });
 
+  it("lava touching metal heats the metal into spark", () => {
+    const simulation = new Simulation(config, "lava-heats-metal", params);
+    simulation.setCell(3, 3, "lava");
+    simulation.setCell(4, 3, "metal");
+
+    simulation.step();
+
+    expect(simulation.getCell(4, 3).material).toBe("spark");
+  });
+
+  it("lava touching stone does not cool into stone", () => {
+    const simulation = new Simulation(config, "lava-stone", params);
+    simulation.setCell(3, 3, "lava");
+    simulation.setCell(4, 3, "stone");
+
+    simulation.step();
+
+    const nearby = [
+      simulation.getCell(2, 3).material,
+      simulation.getCell(3, 3).material,
+      simulation.getCell(2, 4).material,
+      simulation.getCell(3, 4).material,
+      simulation.getCell(4, 4).material,
+    ];
+    expect(nearby).toContain("lava");
+    expect(simulation.getCell(4, 3).material).toBe("stone");
+  });
+
   it("spark has a bounded lifetime when isolated", () => {
     const simulation = new Simulation(config, "spark-isolated", params);
     simulation.setCell(3, 3, "spark", 2);
