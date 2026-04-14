@@ -7,10 +7,11 @@
       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
     />
     <title>Industrial Alchemy Sandbox</title>
-    <script type="module" crossorigin src="./assets/index-cw8VlfpG.js"></script>
-    <link rel="stylesheet" crossorigin href="./assets/index-wQvvYOAg.css">
   </head>
   <body>
-    <div id="app"></div>
+    <script>
+      const suffix = `${window.location.search}${window.location.hash}`;
+      window.location.replace(`./dist/index.html${suffix}`);
+    </script>
   </body>
 </html>
