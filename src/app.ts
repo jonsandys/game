@@ -77,7 +77,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): AppHand
   const title = document.createElement("div");
   title.className = "title-block";
   title.innerHTML = `
-    <p class="eyebrow">Industrial Alchemy Sandbox</p>
+    <p class="eyebrow">Industrial Alchemy Sandbox v${__APP_VERSION__}</p>
     <h1>Watch a tiny world keep itself alive.</h1>
     <p class="lede">Persistent springs, lava vents, and living growth make these worlds worth watching before you touch anything.</p>
   `;
