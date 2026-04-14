@@ -16,6 +16,10 @@ export const MATERIAL_TYPES = [
   "spring",
   "lava-source",
   "acid-source",
+  "nest",
+  "ant",
+  "ant-carry",
+  "egg",
 ] as const;
 
 export type MaterialType = (typeof MATERIAL_TYPES)[number];
@@ -46,6 +50,8 @@ export const PRESET_IDS = [
   "crystal-delta",
   "acid-marsh",
   "ember-terrace",
+  "moss-colony",
+  "crystal-hive",
 ] as const;
 
 export type PresetId = (typeof PRESET_IDS)[number];
@@ -74,6 +80,9 @@ export const PAINTABLE_MATERIALS: MaterialType[] = [
   "spring",
   "lava-source",
   "acid-source",
+  "nest",
+  "ant",
+  "egg",
 ];
 
 export interface SerializedSetupState {

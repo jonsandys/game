@@ -75,6 +75,24 @@ export const PRESETS: Record<PresetId, PresetDefinition> = {
       windBias: 0.05,
     },
   },
+  "moss-colony": {
+    id: "moss-colony",
+    label: "Moss Colony",
+    description: "Foraging ants shuttle plant matter back to damp nests in a layered garden.",
+    defaults: {
+      reactionRate: 0.74,
+      windBias: 0.02,
+    },
+  },
+  "crystal-hive": {
+    id: "crystal-hive",
+    label: "Crystal Hive",
+    description: "Colonies tunnel around crystal shelves, carrying food through humid caverns.",
+    defaults: {
+      reactionRate: 0.7,
+      windBias: -0.02,
+    },
+  },
 };
 
 function buildFloor(simulation: Simulation): void {
@@ -103,6 +121,13 @@ function addAcidSource(simulation: Simulation, x: number, y: number): void {
 
 function addPlantPatch(simulation: Simulation, x: number, y: number, radius: number): void {
   simulation.fillCircle(x, y, radius, "plant");
+}
+
+function addNest(simulation: Simulation, x: number, y: number, ants = 3): void {
+  simulation.setCell(x, y, "nest", 10);
+  for (let offset = 1; offset <= ants; offset += 1) {
+    simulation.setCell(x + ((offset % 2 === 0) ? -offset : offset), y, "ant", 24);
+  }
 }
 
 export function seedPreset(simulation: Simulation, presetId: PresetId): void {
@@ -207,6 +232,37 @@ export function seedPreset(simulation: Simulation, presetId: PresetId): void {
       addPlantPatch(simulation, 58, height - 8, 4);
       addPlantPatch(simulation, width - 20, height - 8, 5);
       simulation.scatter("ember", 0.015, Math.floor(height / 3), height - 10);
+      break;
+    case "moss-colony":
+      addColumn(simulation, 10, 10, height - 18);
+      addColumn(simulation, 34, 12, height - 28);
+      addColumn(simulation, 64, 10, height - 22);
+      addColumn(simulation, width - 22, 12, height - 30);
+      addSpring(simulation, 16, height - 19);
+      addSpring(simulation, 70, height - 23);
+      addPlantPatch(simulation, 22, height - 8, 5);
+      addPlantPatch(simulation, 52, height - 9, 5);
+      addPlantPatch(simulation, width - 20, height - 8, 4);
+      addNest(simulation, 18, height - 20, 4);
+      addNest(simulation, width - 24, height - 31, 3);
+      simulation.scatter("plant", 0.02, Math.floor(height / 2), height - 10);
+      break;
+    case "crystal-hive":
+      addColumn(simulation, 12, 10, height - 20);
+      addColumn(simulation, 42, 12, height - 30);
+      addColumn(simulation, width - 26, 12, height - 24);
+      addSpring(simulation, 18, height - 21);
+      addSpring(simulation, width - 18, height - 25);
+      simulation.fillRect(0, height - 9, width, 1, "water");
+      addPlantPatch(simulation, 24, height - 8, 4);
+      addPlantPatch(simulation, width - 18, height - 8, 4);
+      addNest(simulation, 46, height - 31, 5);
+      addNest(simulation, width - 30, height - 25, 3);
+      for (let index = 0; index < 18; index += 1) {
+        const baseX = randomInt(rng, 12, width - 12);
+        const baseY = randomInt(rng, Math.floor(height / 3), height - 12);
+        simulation.setCell(baseX, baseY, "crystal");
+      }
       break;
   }
 }

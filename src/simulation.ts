@@ -28,6 +28,10 @@ const PLANT = MATERIAL_TO_ID.plant;
 const SPRING = MATERIAL_TO_ID.spring;
 const LAVA_SOURCE = MATERIAL_TO_ID["lava-source"];
 const ACID_SOURCE = MATERIAL_TO_ID["acid-source"];
+const NEST = MATERIAL_TO_ID.nest;
+const ANT = MATERIAL_TO_ID.ant;
+const ANT_CARRY = MATERIAL_TO_ID["ant-carry"];
+const EGG = MATERIAL_TO_ID.egg;
 
 function defaultLife(materialId: number, rng: Rng): number {
   switch (materialId) {
@@ -46,6 +50,13 @@ function defaultLife(materialId: number, rng: Rng): number {
     case EMBER:
       return randomInt(rng, 10, 16);
     case PLANT:
+      return randomInt(rng, 18, 28);
+    case NEST:
+      return randomInt(rng, 8, 14);
+    case ANT:
+    case ANT_CARRY:
+      return randomInt(rng, 24, 40);
+    case EGG:
       return randomInt(rng, 18, 28);
     default:
       return 0;
@@ -74,6 +85,14 @@ function isPlantFuel(materialId: number): boolean {
 
 function canSupportPlant(materialId: number): boolean {
   return materialId === STONE || materialId === SAND || materialId === METAL || materialId === PLANT || materialId === CRYSTAL;
+}
+
+function isHazard(materialId: number): boolean {
+  return materialId === FIRE || materialId === ACID || materialId === LAVA || materialId === EMBER;
+}
+
+function isAntSupport(materialId: number): boolean {
+  return materialId !== EMPTY && !isGas(materialId) && materialId !== WATER && materialId !== ACID;
 }
 
 function drainsOutBottom(materialId: number): boolean {
@@ -265,6 +284,18 @@ export class Simulation {
             break;
           case ACID_SOURCE:
             this.updateAcidSource(x, y, index);
+            break;
+          case NEST:
+            this.updateNest(x, y, index);
+            break;
+          case ANT:
+            this.updateAnt(x, y, index, false);
+            break;
+          case ANT_CARRY:
+            this.updateAnt(x, y, index, true);
+            break;
+          case EGG:
+            this.updateEgg(x, y, index);
             break;
           default:
             this.updatedAt[index] = this.tick;
@@ -798,6 +829,168 @@ export class Simulation {
     this.updatedAt[index] = this.tick;
   }
 
+  private updateNest(x: number, y: number, index: number): void {
+    let stores = this.life[index] > 0 ? this.life[index] : defaultLife(NEST, this.rng);
+
+    for (const neighbor of this.cardinalNeighbors(x, y)) {
+      if (!this.inBounds(neighbor.x, neighbor.y)) {
+        continue;
+      }
+
+      const neighborIndex = this.index(neighbor.x, neighbor.y);
+      if (this.materials[neighborIndex] === ANT_CARRY) {
+        this.materials[neighborIndex] = ANT;
+        this.life[neighborIndex] = defaultLife(ANT, this.rng);
+        this.updatedAt[neighborIndex] = this.tick;
+        stores = Math.min(60, stores + 6);
+      }
+    }
+
+    if (stores >= 12 && (this.tick + x + y) % 6 === 0) {
+      const hatchery = this.allNeighbors(x, y).find((neighbor) => {
+        if (!this.inBounds(neighbor.x, neighbor.y)) {
+          return false;
+        }
+
+        const targetIndex = this.index(neighbor.x, neighbor.y);
+        if (this.materials[targetIndex] !== EMPTY) {
+          return false;
+        }
+
+        const below = this.inBounds(neighbor.x, neighbor.y + 1)
+          ? this.materials[this.index(neighbor.x, neighbor.y + 1)]
+          : STONE;
+
+        return isAntSupport(below);
+      });
+
+      if (hatchery) {
+        const hatcheryIndex = this.index(hatchery.x, hatchery.y);
+        this.materials[hatcheryIndex] = EGG;
+        this.life[hatcheryIndex] = defaultLife(EGG, this.rng);
+        this.updatedAt[hatcheryIndex] = this.tick;
+        stores -= 8;
+      }
+    }
+
+    this.life[index] = stores;
+    this.updatedAt[index] = this.tick;
+  }
+
+  private updateEgg(x: number, y: number, index: number): void {
+    const below = this.inBounds(x, y + 1) ? this.materials[this.index(x, y + 1)] : STONE;
+    if (y < this.config.height - 1 && below === EMPTY) {
+      this.swap(index, this.index(x, y + 1));
+      return;
+    }
+
+    for (const neighbor of this.cardinalNeighbors(x, y)) {
+      if (!this.inBounds(neighbor.x, neighbor.y)) {
+        continue;
+      }
+
+      if (isHazard(this.materials[this.index(neighbor.x, neighbor.y)])) {
+        this.materials[index] = EMPTY;
+        this.life[index] = 0;
+        this.updatedAt[index] = this.tick;
+        return;
+      }
+    }
+
+    this.life[index] = this.life[index] > 0 ? this.life[index] - 1 : defaultLife(EGG, this.rng);
+    if (this.life[index] <= 0) {
+      this.materials[index] = ANT;
+      this.life[index] = defaultLife(ANT, this.rng);
+    }
+    this.updatedAt[index] = this.tick;
+  }
+
+  private updateAnt(x: number, y: number, index: number, carrying: boolean): void {
+    for (const neighbor of this.allNeighbors(x, y)) {
+      if (!this.inBounds(neighbor.x, neighbor.y)) {
+        continue;
+      }
+
+      const neighborIndex = this.index(neighbor.x, neighbor.y);
+      const material = this.materials[neighborIndex];
+      if (isHazard(material) || material === WATER) {
+        this.materials[index] = EMPTY;
+        this.life[index] = 0;
+        this.updatedAt[index] = this.tick;
+        return;
+      }
+    }
+
+    if (carrying) {
+      for (const neighbor of this.cardinalNeighbors(x, y)) {
+        if (!this.inBounds(neighbor.x, neighbor.y)) {
+          continue;
+        }
+
+        if (this.materials[this.index(neighbor.x, neighbor.y)] === NEST) {
+          this.materials[index] = ANT;
+          this.life[index] = defaultLife(ANT, this.rng);
+          this.updatedAt[index] = this.tick;
+          return;
+        }
+      }
+    } else {
+      for (const neighbor of this.allNeighbors(x, y)) {
+        if (!this.inBounds(neighbor.x, neighbor.y)) {
+          continue;
+        }
+
+        const neighborIndex = this.index(neighbor.x, neighbor.y);
+        const material = this.materials[neighborIndex];
+        if (material === PLANT || material === CRYSTAL) {
+          this.materials[neighborIndex] = EMPTY;
+          this.life[neighborIndex] = 0;
+          this.updatedAt[neighborIndex] = this.tick;
+          this.materials[index] = ANT_CARRY;
+          this.life[index] = defaultLife(ANT_CARRY, this.rng);
+          this.updatedAt[index] = this.tick;
+          return;
+        }
+      }
+    }
+
+    const below = this.inBounds(x, y + 1) ? this.materials[this.index(x, y + 1)] : STONE;
+    if (y < this.config.height - 1 && below === EMPTY && this.rng() < 0.55) {
+      this.swap(index, this.index(x, y + 1));
+      return;
+    }
+
+    const target = carrying
+      ? this.findNearestMaterial(x, y, [NEST], 12)
+      : this.findNearestMaterial(x, y, [PLANT, CRYSTAL], 10);
+
+    const candidates = this.allNeighbors(x, y)
+      .filter((neighbor) => this.inBounds(neighbor.x, neighbor.y))
+      .map((neighbor) => ({ ...neighbor, index: this.index(neighbor.x, neighbor.y) }))
+      .filter((neighbor) => this.materials[neighbor.index] === EMPTY);
+
+    candidates.sort((left, right) => {
+      const leftDistance = target ? Math.abs(target.x - left.x) + Math.abs(target.y - left.y) : 0;
+      const rightDistance = target ? Math.abs(target.x - right.x) + Math.abs(target.y - right.y) : 0;
+      const leftSupport = this.hasSupport(left.x, left.y) ? 0 : 2;
+      const rightSupport = this.hasSupport(right.x, right.y) ? 0 : 2;
+      return (leftDistance + leftSupport) - (rightDistance + rightSupport);
+    });
+
+    const preferred = candidates[0];
+    if (preferred && (target || this.rng() < 0.8)) {
+      this.swap(index, preferred.index);
+      return;
+    }
+
+    this.life[index] = this.life[index] > 0 ? this.life[index] - 1 : defaultLife(carrying ? ANT_CARRY : ANT, this.rng);
+    if (this.life[index] <= 0) {
+      this.materials[index] = EMPTY;
+      this.life[index] = 0;
+    }
+    this.updatedAt[index] = this.tick;
+  }
+
   private emitMaterial(
     materialId: number,
     candidates: Array<{ x: number; y: number }>,
@@ -923,5 +1116,40 @@ export class Simulation {
     }
 
     return -1;
+  }
+
+  private hasSupport(x: number, y: number): boolean {
+    return this.cardinalNeighbors(x, y).some((neighbor) => {
+      if (!this.inBounds(neighbor.x, neighbor.y)) {
+        return true;
+      }
+
+      return isAntSupport(this.materials[this.index(neighbor.x, neighbor.y)]);
+    });
+  }
+
+  private findNearestMaterial(
+    originX: number,
+    originY: number,
+    materialIds: number[],
+    radius: number,
+  ): { x: number; y: number } | null {
+    let closest: { x: number; y: number; distance: number } | null = null;
+
+    for (let y = Math.max(0, originY - radius); y <= Math.min(this.config.height - 1, originY + radius); y += 1) {
+      for (let x = Math.max(0, originX - radius); x <= Math.min(this.config.width - 1, originX + radius); x += 1) {
+        const material = this.materials[this.index(x, y)];
+        if (!materialIds.includes(material)) {
+          continue;
+        }
+
+        const distance = Math.abs(originX - x) + Math.abs(originY - y);
+        if (!closest || distance < closest.distance) {
+          closest = { x, y, distance };
+        }
+      }
+    }
+
+    return closest ? { x: closest.x, y: closest.y } : null;
   }
 }

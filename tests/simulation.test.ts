@@ -264,4 +264,58 @@ describe("simulation", () => {
 
     expect(simulation.getCell(3, 3).material).not.toBe("sand");
   });
+
+  it("eggs hatch into ants over time", () => {
+    const simulation = new Simulation(config, "egg", params);
+    simulation.setCell(3, 5, "stone");
+    simulation.setCell(3, 4, "egg", 1);
+
+    simulation.step();
+
+    expect(simulation.getCell(3, 4).material).toBe("ant");
+  });
+
+  it("ants gather nearby food", () => {
+    const simulation = new Simulation(config, "ants", params);
+    simulation.setCell(2, 5, "stone");
+    simulation.setCell(3, 5, "stone");
+    simulation.setCell(4, 5, "stone");
+    simulation.setCell(3, 4, "nest", 8);
+    simulation.setCell(4, 4, "ant", 30);
+    simulation.setCell(5, 4, "plant", 20);
+
+    for (let step = 0; step < 3; step += 1) {
+      simulation.step();
+    }
+
+    expect(simulation.getCell(5, 4).material).toBe("empty");
+    let foundWorker = false;
+    simulation.forEachCell((_x, _y, cell) => {
+      if (cell.material === "ant" || cell.material === "ant-carry") {
+        foundWorker = true;
+      }
+    });
+    expect(foundWorker).toBe(true);
+  });
+
+  it("nests turn returned food into eggs", () => {
+    const simulation = new Simulation(config, "nest-food", params);
+    simulation.setCell(3, 5, "stone");
+    simulation.setCell(2, 4, "stone");
+    simulation.setCell(4, 4, "stone");
+    simulation.setCell(3, 4, "nest", 16);
+    simulation.setCell(4, 3, "ant-carry", 20);
+
+    for (let step = 0; step < 8; step += 1) {
+      simulation.step();
+    }
+
+    let foundEgg = false;
+    simulation.forEachCell((_x, _y, cell) => {
+      if (cell.material === "egg") {
+        foundEgg = true;
+      }
+    });
+    expect(foundEgg).toBe(true);
+  });
 });

@@ -19,6 +19,10 @@ const PALETTES: Record<CellState["material"], [number, number, number]> = {
   spring: [110, 226, 255],
   "lava-source": [255, 150, 76],
   "acid-source": [168, 255, 112],
+  nest: [125, 88, 59],
+  ant: [244, 232, 193],
+  "ant-carry": [255, 209, 112],
+  egg: [246, 240, 221],
 };
 
 function clampByte(value: number): number {
@@ -78,6 +82,12 @@ export class Renderer {
         tint += Math.floor(Math.sin(simulation.tick * 0.24 + x * 0.2 + y * 0.2) * 14) + 6;
       } else if (cell.material === "plant") {
         tint += Math.floor(Math.sin(simulation.tick * 0.08 + y * 0.25) * 8);
+      } else if (cell.material === "ant" || cell.material === "ant-carry") {
+        tint += Math.floor(Math.sin(simulation.tick * 0.45 + x + y * 0.5) * 18) + 8;
+      } else if (cell.material === "egg") {
+        tint += Math.floor(Math.sin(simulation.tick * 0.1 + x * 0.2) * 6) + 6;
+      } else if (cell.material === "nest") {
+        tint += Math.floor(Math.sin(simulation.tick * 0.04 + y * 0.2) * 5);
       } else if (cell.material === "steam") {
         tint += 10;
       } else if (cell.material === "empty") {
