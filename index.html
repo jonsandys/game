@@ -9,9 +9,7 @@
     <title>Industrial Alchemy Sandbox</title>
   </head>
   <body>
-    <script>
-      const suffix = `${window.location.search}${window.location.hash}`;
-      window.location.replace(`./dist/index.html${suffix}`);
-    </script>
+    <div id="app"></div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
