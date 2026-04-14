@@ -3,7 +3,7 @@ import { PRESETS } from "./presets";
 import { Renderer } from "./renderer";
 import { decodeSetupState, encodeSetupState, getDefaultSetupState } from "./serialization";
 import { createSimulationFromSetup, createWorldConfig } from "./world";
-import { type BrushState, type PresetId, type SerializedSetupState } from "./types";
+import { PAINTABLE_MATERIALS, type BrushState, type PresetId, type SerializedSetupState } from "./types";
 
 interface AppOptions {
   search?: string;
@@ -51,7 +51,7 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): AppHand
 
   let brush: BrushState = {
     tool: "material",
-    material: "sand",
+    material: "spring",
     size: 2,
   };
   let playing = true;
@@ -78,8 +78,8 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): AppHand
   title.className = "title-block";
   title.innerHTML = `
     <p class="eyebrow">Industrial Alchemy Sandbox</p>
-    <h1>Watch matter collide, corrode, and bloom.</h1>
-    <p class="lede">A living pixel toy that keeps going on its own while you nudge the chemistry.</p>
+    <h1>Watch a tiny world keep itself alive.</h1>
+    <p class="lede">Persistent springs, lava vents, and living growth make these worlds worth watching before you touch anything.</p>
   `;
 
   const presetLabel = document.createElement("label");
@@ -128,20 +128,11 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): AppHand
   materialLabel.className = "control-stack";
   materialLabel.textContent = "Material";
   const materialSelect = document.createElement("select");
-  [
-    "sand",
-    "water",
-    "stone",
-    "metal",
-    "acid",
-    "fire",
-    "smoke",
-    "steam",
-    "crystal",
-  ].forEach((material) => {
+  PAINTABLE_MATERIALS.forEach((material) => {
     const option = document.createElement("option");
     option.value = material;
     option.textContent = material;
+    option.selected = material === brush.material;
     materialSelect.append(option);
   });
   materialLabel.append(materialSelect);

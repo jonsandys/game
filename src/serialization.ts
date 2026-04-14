@@ -1,10 +1,10 @@
 import { PRESET_IDS, type PresetId, type SerializedSetupState } from "./types";
 
 const DEFAULT_STATE: SerializedSetupState = {
-  seed: "forge-001",
-  preset: "foundry",
-  reactionRate: 0.65,
-  windBias: 0,
+  seed: "terrarium-001",
+  preset: "river-garden",
+  reactionRate: 0.72,
+  windBias: 0.08,
   speed: 1,
 };
 

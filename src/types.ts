@@ -10,6 +10,11 @@ export const MATERIAL_TYPES = [
   "steam",
   "spark",
   "crystal",
+  "lava",
+  "ember",
+  "plant",
+  "spring",
+  "lava-source",
 ] as const;
 
 export type MaterialType = (typeof MATERIAL_TYPES)[number];
@@ -32,10 +37,14 @@ export interface SimulationParams {
 }
 
 export const PRESET_IDS = [
-  "foundry",
-  "corrosion",
+  "river-garden",
+  "hanging-aquifer",
+  "magma-falls",
+  "overgrown-foundry",
   "storm-circuit",
-  "crystal-bloom",
+  "crystal-delta",
+  "acid-marsh",
+  "ember-terrace",
 ] as const;
 
 export type PresetId = (typeof PRESET_IDS)[number];
@@ -49,6 +58,21 @@ export interface BrushState {
   material: MaterialType;
   size: number;
 }
+
+export const PAINTABLE_MATERIALS: MaterialType[] = [
+  "sand",
+  "water",
+  "stone",
+  "metal",
+  "acid",
+  "fire",
+  "steam",
+  "crystal",
+  "lava",
+  "plant",
+  "spring",
+  "lava-source",
+];
 
 export interface SerializedSetupState {
   seed: string;
