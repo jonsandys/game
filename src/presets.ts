@@ -96,6 +96,11 @@ function addLavaSource(simulation: Simulation, x: number, y: number): void {
   simulation.setCell(x, y + 1, "lava");
 }
 
+function addAcidSource(simulation: Simulation, x: number, y: number): void {
+  simulation.setCell(x, y, "acid-source");
+  simulation.setCell(x, y + 1, "acid");
+}
+
 function addPlantPatch(simulation: Simulation, x: number, y: number, radius: number): void {
   simulation.fillCircle(x, y, radius, "plant");
 }
@@ -185,6 +190,7 @@ export function seedPreset(simulation: Simulation, presetId: PresetId): void {
       addColumn(simulation, 62, 12, height - 22);
       addSpring(simulation, 24, height - 21);
       addSpring(simulation, width - 18, height - 17);
+      addAcidSource(simulation, Math.floor(width * 0.5), height - 23);
       simulation.fillRect(0, height - 8, width, 1, "acid");
       simulation.scatter("acid", 0.03, Math.floor(height / 2), height - 10);
       addPlantPatch(simulation, 46, height - 7, 3);

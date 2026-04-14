@@ -153,13 +153,16 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): AppHand
   const resetButton = document.createElement("button");
   resetButton.type = "button";
   resetButton.textContent = "Reset";
+  const clearButton = document.createElement("button");
+  clearButton.type = "button";
+  clearButton.textContent = "Clear";
   const reseedButton = document.createElement("button");
   reseedButton.type = "button";
   reseedButton.textContent = "Random Reseed";
   const shareButton = document.createElement("button");
   shareButton.type = "button";
   shareButton.textContent = "Copy Share Link";
-  buttons.append(playButton, stepButton, resetButton, reseedButton, shareButton);
+  buttons.append(playButton, stepButton, resetButton, clearButton, reseedButton, shareButton);
 
   chrome.append(
     title,
@@ -254,6 +257,11 @@ export function createApp(mount: HTMLElement, options: AppOptions = {}): AppHand
   });
 
   resetButton.addEventListener("click", rebuildSimulation);
+
+  clearButton.addEventListener("click", () => {
+    simulation.clear();
+    renderer.render(simulation);
+  });
 
   reseedButton.addEventListener("click", () => {
     seedInput.value = randomSeed();
