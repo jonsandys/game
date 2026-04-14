@@ -27,6 +27,7 @@ const EMBER = MATERIAL_TO_ID.ember;
 const PLANT = MATERIAL_TO_ID.plant;
 const SPRING = MATERIAL_TO_ID.spring;
 const LAVA_SOURCE = MATERIAL_TO_ID["lava-source"];
+const ACID_SOURCE = MATERIAL_TO_ID["acid-source"];
 
 function defaultLife(materialId: number, rng: Rng): number {
   switch (materialId) {
@@ -60,7 +61,7 @@ function isGas(materialId: number): boolean {
 }
 
 function isSource(materialId: number): boolean {
-  return materialId === SPRING || materialId === LAVA_SOURCE;
+  return materialId === SPRING || materialId === LAVA_SOURCE || materialId === ACID_SOURCE;
 }
 
 function isDissolvable(materialId: number): boolean {
@@ -73,6 +74,10 @@ function isPlantFuel(materialId: number): boolean {
 
 function canSupportPlant(materialId: number): boolean {
   return materialId === STONE || materialId === SAND || materialId === METAL || materialId === PLANT || materialId === CRYSTAL;
+}
+
+function drainsOutBottom(materialId: number): boolean {
+  return materialId === SAND || materialId === WATER || materialId === ACID || materialId === LAVA || materialId === EMBER;
 }
 
 export class Simulation {
@@ -258,6 +263,9 @@ export class Simulation {
           case LAVA_SOURCE:
             this.updateLavaSource(x, y, index);
             break;
+          case ACID_SOURCE:
+            this.updateAcidSource(x, y, index);
+            break;
           default:
             this.updatedAt[index] = this.tick;
             break;
@@ -267,6 +275,10 @@ export class Simulation {
   }
 
   private updateSand(x: number, y: number, index: number): void {
+    if (this.tryDrainOutBottom(y, index, EMPTY)) {
+      return;
+    }
+
     const moved = this.tryMoveByPriority(
       x,
       y,
@@ -284,6 +296,19 @@ export class Simulation {
   }
 
   private updateWater(x: number, y: number, index: number): void {
+    for (const neighbor of [{ x, y: y + 1 }, { x: x - 1, y: y + 1 }, { x: x + 1, y: y + 1 }]) {
+      if (!this.inBounds(neighbor.x, neighbor.y)) {
+        continue;
+      }
+
+      const neighborIndex = this.index(neighbor.x, neighbor.y);
+      if (this.materials[neighborIndex] === SAND && this.rng() < 0.015 + this.params.reactionRate * 0.03) {
+        this.materials[neighborIndex] = EMPTY;
+        this.life[neighborIndex] = 0;
+        this.updatedAt[neighborIndex] = this.tick;
+      }
+    }
+
     if (this.tryDrainOutBottom(y, index, EMPTY)) {
       return;
     }
@@ -413,14 +438,25 @@ export class Simulation {
 
   private updateGas(x: number, y: number, materialId: number): void {
     const originIndex = this.index(x, y);
-    if (y === 0) {
-      if (materialId === STEAM && this.rng() < 0.35) {
-        this.materials[originIndex] = WATER;
-        this.life[originIndex] = 0;
-      } else {
+    const blockedAbove = y === 0 || (this.inBounds(x, y - 1) && this.materials[this.index(x, y - 1)] !== EMPTY);
+    if (materialId === STEAM) {
+      if (blockedAbove) {
+        this.life[originIndex] = Math.min(60, this.life[originIndex] + 1);
+        if (this.life[originIndex] >= 24 && this.rng() < 0.12) {
+          this.materials[originIndex] = WATER;
+          this.life[originIndex] = 0;
+          this.updatedAt[originIndex] = this.tick;
+          return;
+        }
+      } else if (y === 0) {
         this.materials[originIndex] = EMPTY;
         this.life[originIndex] = 0;
+        this.updatedAt[originIndex] = this.tick;
+        return;
       }
+    } else if (y === 0) {
+      this.materials[originIndex] = EMPTY;
+      this.life[originIndex] = 0;
       this.updatedAt[originIndex] = this.tick;
       return;
     }
@@ -436,22 +472,37 @@ export class Simulation {
           { x: x + 1, y: y - 1 },
         ];
 
-    this.tryMoveByPriority(
-      x,
-      y,
-      [{ x, y: y - 1 }, ...diagonals, { x: x + windDirection, y }],
-      (target) => target === EMPTY || (materialId === SMOKE && target === STEAM),
-    );
+    if (materialId === STEAM && blockedAbove) {
+      this.tryMoveByPriority(
+        x,
+        y,
+        [{ x: x + windDirection, y }, { x: x - windDirection, y }],
+        (target) => target === EMPTY,
+      );
+    } else {
+      this.tryMoveByPriority(
+        x,
+        y,
+        [{ x, y: y - 1 }, ...diagonals, { x: x + windDirection, y }],
+        (target) => target === EMPTY || (materialId === SMOKE && target === STEAM),
+      );
+    }
 
     const currentIndex = this.findMaterialIndexNear(x, y, materialId);
     if (currentIndex === -1) {
       return;
     }
 
-    this.life[currentIndex] = this.life[currentIndex] > 0 ? this.life[currentIndex] - 1 : defaultLife(materialId, this.rng);
-    if (this.life[currentIndex] <= 0) {
-      this.materials[currentIndex] = materialId === STEAM ? WATER : EMPTY;
-      this.life[currentIndex] = 0;
+    if (materialId === STEAM) {
+      if (this.life[currentIndex] <= 0) {
+        this.life[currentIndex] = defaultLife(materialId, this.rng);
+      }
+    } else {
+      this.life[currentIndex] = this.life[currentIndex] > 0 ? this.life[currentIndex] - 1 : defaultLife(materialId, this.rng);
+      if (this.life[currentIndex] <= 0) {
+        this.materials[currentIndex] = EMPTY;
+        this.life[currentIndex] = 0;
+      }
     }
     this.updatedAt[currentIndex] = this.tick;
   }
@@ -550,23 +601,18 @@ export class Simulation {
         return;
       }
 
+      if (material === STONE && this.rng() < 0.08) {
+        this.materials[index] = STONE;
+        this.life[index] = 0;
+        this.updatedAt[index] = this.tick;
+        return;
+      }
+
       if (isPlantFuel(material) || material === CRYSTAL) {
         this.materials[neighborIndex] = FIRE;
         this.life[neighborIndex] = defaultLife(FIRE, this.rng);
         this.updatedAt[neighborIndex] = this.tick;
       }
-    }
-
-    this.life[index] = this.life[index] > 0 ? this.life[index] - 1 : defaultLife(LAVA, this.rng);
-    if (this.life[index] <= 0) {
-      this.materials[index] = STONE;
-      this.life[index] = 0;
-      this.updatedAt[index] = this.tick;
-      return;
-    }
-
-    if (this.tryDrainOutBottom(y, index, STONE)) {
-      return;
     }
 
     if ((this.tick + x + y) % 2 === 0) {
@@ -653,7 +699,7 @@ export class Simulation {
     }
 
     if (!hydrated && this.life[index] <= 0) {
-      this.materials[index] = pickOne(this.rng, [EMPTY, SAND]);
+      this.materials[index] = EMPTY;
       this.life[index] = 0;
       this.updatedAt[index] = this.tick;
       return;
@@ -732,6 +778,23 @@ export class Simulation {
     this.updatedAt[index] = this.tick;
   }
 
+  private updateAcidSource(x: number, y: number, index: number): void {
+    if ((this.tick + y) % 3 === 0) {
+      this.emitMaterial(
+        ACID,
+        [
+          { x, y: y + 1 },
+          { x: x - 1, y: y + 1 },
+          { x: x + 1, y: y + 1 },
+          { x: x - 1, y },
+          { x: x + 1, y },
+        ],
+      );
+    }
+
+    this.updatedAt[index] = this.tick;
+  }
+
   private emitMaterial(
     materialId: number,
     candidates: Array<{ x: number; y: number }>,
@@ -759,7 +822,7 @@ export class Simulation {
       return false;
     }
 
-    if (this.rng() < 0.35) {
+    if (drainsOutBottom(this.materials[index])) {
       this.materials[index] = replacement;
       this.life[index] = 0;
       this.updatedAt[index] = this.tick;

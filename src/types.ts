@@ -15,6 +15,7 @@ export const MATERIAL_TYPES = [
   "plant",
   "spring",
   "lava-source",
+  "acid-source",
 ] as const;
 
 export type MaterialType = (typeof MATERIAL_TYPES)[number];
@@ -72,6 +73,7 @@ export const PAINTABLE_MATERIALS: MaterialType[] = [
   "plant",
   "spring",
   "lava-source",
+  "acid-source",
 ];
 
 export interface SerializedSetupState {

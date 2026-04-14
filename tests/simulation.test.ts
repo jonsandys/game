@@ -34,6 +34,17 @@ describe("simulation", () => {
     expect(simulation.getCell(3, 2).material).toBe("sand");
   });
 
+  it("flowing materials fall out of the bottom of the world", () => {
+    const simulation = new Simulation(config, "bottom-drain", params);
+    simulation.setCell(3, config.height - 1, "water");
+    simulation.setCell(4, config.height - 1, "sand");
+
+    simulation.step();
+
+    expect(simulation.getCell(3, config.height - 1).material).toBe("empty");
+    expect(simulation.getCell(4, config.height - 1).material).toBe("empty");
+  });
+
   it("water flows sideways when blocked", () => {
     const simulation = new Simulation(config, "water", params);
     simulation.setCell(3, 2, "water");
@@ -56,6 +67,21 @@ describe("simulation", () => {
     simulation.step();
 
     expect(simulation.getCell(4, 3).material).not.toBe("metal");
+  });
+
+  it("acid sources emit acid", () => {
+    const simulation = new Simulation(config, "acid-source", params);
+    simulation.setCell(3, 2, "acid-source");
+
+    for (let step = 0; step < 4; step += 1) {
+      simulation.step();
+    }
+
+    expect(
+      simulation.getCell(3, 3).material === "acid" ||
+      simulation.getCell(2, 3).material === "acid" ||
+      simulation.getCell(4, 3).material === "acid",
+    ).toBe(true);
   });
 
   it("springs emit running water", () => {
@@ -100,6 +126,28 @@ describe("simulation", () => {
       simulation.getCell(2, 3).material === "lava" ||
       simulation.getCell(4, 3).material === "lava",
     ).toBe(true);
+  });
+
+  it("lava pools against metal instead of turning to stone", () => {
+    const simulation = new Simulation(config, "lava-metal", params);
+    simulation.setCell(3, 2, "lava");
+    simulation.setCell(3, 3, "metal");
+
+    for (let step = 0; step < 4; step += 1) {
+      simulation.step();
+    }
+
+    const cells = [
+      simulation.getCell(2, 2).material,
+      simulation.getCell(3, 2).material,
+      simulation.getCell(4, 2).material,
+      simulation.getCell(2, 3).material,
+      simulation.getCell(4, 3).material,
+      simulation.getCell(2, 4).material,
+      simulation.getCell(3, 4).material,
+      simulation.getCell(4, 4).material,
+    ];
+    expect(cells).toContain("lava");
   });
 
   it("spark has a bounded lifetime when isolated", () => {
@@ -148,5 +196,44 @@ describe("simulation", () => {
       simulation.getCell(4, 3).material,
     ];
     expect(nearby).toContain("plant");
+  });
+
+  it("blocked steam lingers before condensing", () => {
+    const simulation = new Simulation(config, "steam", params);
+    simulation.setCell(2, 0, "stone");
+    simulation.setCell(3, 0, "stone");
+    simulation.setCell(4, 0, "stone");
+    simulation.setCell(2, 1, "stone");
+    simulation.setCell(4, 1, "stone");
+    simulation.setCell(3, 1, "steam", 30);
+
+    for (let step = 0; step < 5; step += 1) {
+      simulation.step();
+    }
+
+    expect(simulation.getCell(3, 1).material).toBe("steam");
+  });
+
+  it("falling water slowly wears away sand", () => {
+    const simulation = new Simulation(config, "erosion", params);
+    simulation.setCell(3, 1, "water");
+    simulation.setCell(3, 2, "sand");
+
+    for (let step = 0; step < 40; step += 1) {
+      simulation.step();
+    }
+
+    expect(simulation.getCell(3, 2).material).not.toBe("sand");
+  });
+
+  it("dry plants do not mostly decay into sand", () => {
+    const simulation = new Simulation(config, "plant-decay", params);
+    simulation.setCell(3, 3, "plant", 1);
+
+    for (let step = 0; step < 4; step += 1) {
+      simulation.step();
+    }
+
+    expect(simulation.getCell(3, 3).material).not.toBe("sand");
   });
 });
